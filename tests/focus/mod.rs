@@ -2,6 +2,7 @@
 
 mod harness;
 mod modifier {
+    mod bound_focus;
     mod clip;
     mod frame;
     mod hidden;
