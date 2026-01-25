@@ -16,6 +16,7 @@ mod image;
 pub mod match_view;
 mod modifier;
 mod option;
+pub mod rotary;
 pub mod scroll_view;
 pub mod shape;
 mod spacer;
