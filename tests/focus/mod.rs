@@ -7,6 +7,7 @@ mod modifier {
     mod hidden;
     mod opacity;
     mod overlay;
+    mod popover;
 }
 mod view {
     mod button;
