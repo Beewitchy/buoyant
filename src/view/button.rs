@@ -6,12 +6,13 @@ use embedded_touch::Phase;
 
 use crate::{
     environment::LayoutEnvironment,
-    event::{EventContext, EventResult},
+    event::{Event, EventContext, EventResult},
+    focus::{FocusAction, Role},
     layout::ResolvedLayout,
-    primitives::{Frame, ProposedDimensions},
-    render::Container,
+    primitives::{ProposedDimensions, geometry::Rectangle},
+    render::{Container, IntrinsicShape},
     transition::Opacity,
-    view::{Event, ViewLayout, ViewMarker},
+    view::{ViewLayout, ViewMarker},
 };
 
 /// A button interaction state.
@@ -104,7 +105,10 @@ impl<ViewFn, Inner: ViewMarker, Action> Button<ViewFn, Inner, Action> {
     }
 }
 
-impl<ViewFn, Inner: ViewMarker, Action> ViewMarker for Button<ViewFn, Inner, Action> {
+impl<ViewFn, Inner: ViewMarker, Action> ViewMarker for Button<ViewFn, Inner, Action>
+where
+    Inner::Renderables: IntrinsicShape,
+{
     type Renderables = Container<Inner::Renderables>;
     type Transition = Opacity;
 }
@@ -114,10 +118,12 @@ where
     Action: Fn(&mut Captures),
     Captures: ?Sized,
     Inner: ViewLayout<Captures>,
+    Inner::Renderables: IntrinsicShape,
     ViewFn: Fn(bool) -> Inner,
 {
     type State = (ButtonState, Inner::State);
     type Sublayout = ResolvedLayout<Inner::Sublayout>;
+    type FocusTree = Inner::FocusTree;
 
     fn transition(&self) -> Self::Transition {
         Opacity
@@ -160,7 +166,7 @@ where
         state: &mut Self::State,
     ) -> Self::Renderables {
         Container::new(
-            Frame::new(origin, layout.resolved_size.into()),
+            Rectangle::new(origin, layout.resolved_size.into()),
             match state.0 {
                 ButtonState::CaptivePressed(_) => (self.view)(true).render_tree(
                     &layout.sublayouts,
@@ -183,75 +189,95 @@ where
     fn handle_event(
         &self,
         event: &Event,
-        _context: &EventContext,
+        context: &EventContext,
         render_tree: &mut Self::Renderables,
         captures: &mut Captures,
         state: &mut Self::State,
+        _focus: &mut Self::FocusTree,
     ) -> EventResult {
-        let mut result = EventResult::default();
-        let Event::Touch(touch) = event else {
-            return result;
-        };
-        // Only track the ID of the first touch that started within the button.
-        if let ButtonState::Captive(touch_id) | ButtonState::CaptivePressed(touch_id) = state.0
-            && touch.id != touch_id
-        {
-            return result;
-        }
+        match event {
+            Event::Touch(touch) => {
+                // Only track the ID of the first touch that started within the button.
+                if let ButtonState::Captive(touch_id) | ButtonState::CaptivePressed(touch_id) =
+                    state.0
+                    && touch.id != touch_id
+                {
+                    return EventResult::Deferred;
+                }
 
-        let point = touch.location.into();
-        match touch.phase {
-            Phase::Started => {
-                if render_tree.frame.contains(&point) {
-                    state.0 = ButtonState::CaptivePressed(touch.id);
-                    // TODO: I think we could maybe just recompute the tiny button render
-                    // tree here and avoid recomputing the view.
-                    // May require an internal animation render node?
-                    result.recompute_view = true;
-                    result.handled = true;
-                }
-            }
-            Phase::Ended => {
-                if state.0 != ButtonState::AtRest {
-                    if render_tree.frame.contains(&point) {
-                        (self.action)(captures);
+                let point = touch.location.into();
+                match touch.phase {
+                    Phase::Started => {
+                        if render_tree.frame.contains(&point) {
+                            state.0 = ButtonState::CaptivePressed(touch.id);
+                            // TODO: I think we could maybe just recompute the tiny button render
+                            // tree here and avoid recomputing the view.
+                            // May require an internal animation render node?
+                            context.request_view_rebuild();
+                            return EventResult::handled_unfocused();
+                        }
                     }
-                    state.0 = ButtonState::AtRest;
-                    result.recompute_view = true;
-                    result.handled = true;
+                    Phase::Ended => {
+                        if state.0 != ButtonState::AtRest {
+                            if render_tree.frame.contains(&point) {
+                                (self.action)(captures);
+                            }
+                            state.0 = ButtonState::AtRest;
+                            context.request_view_rebuild();
+                            return EventResult::handled_focused(render_tree.child.content_shape());
+                        }
+                    }
+                    Phase::Moved => match (render_tree.frame.contains(&point), state.0) {
+                        (true, ButtonState::Captive(touch_id)) => {
+                            state.0 = ButtonState::CaptivePressed(touch_id);
+                            // TODO: Same here...
+                            context.request_view_rebuild();
+                            return EventResult::handled_unfocused();
+                        }
+                        (false, ButtonState::CaptivePressed(touch_id)) => {
+                            state.0 = ButtonState::Captive(touch_id);
+                            // TODO: Same here...
+                            context.request_view_rebuild();
+                            return EventResult::handled_unfocused();
+                        }
+                        (true, ButtonState::CaptivePressed(_))
+                        | (false, ButtonState::Captive(_)) => {
+                            return EventResult::handled_unfocused();
+                        }
+                        (_, ButtonState::AtRest) => (),
+                    },
+                    Phase::Cancelled => {
+                        if matches!(state.0, ButtonState::CaptivePressed(_)) {
+                            // TODO: Same here...
+                            context.request_view_rebuild();
+                        }
+                        state.0 = ButtonState::AtRest;
+                        return EventResult::Deferred;
+                    }
+                    Phase::Hovering(_) => {}
+                }
+                EventResult::Deferred
+            }
+            Event::Focus(focus_event) => {
+                if !context.roles.contains(Role::Button) {
+                    return EventResult::Deferred;
+                }
+                context.request_redraw(); // Do we always care?
+                match focus_event {
+                    FocusAction::Next | FocusAction::Previous | FocusAction::Blur => {
+                        EventResult::Deferred
+                    }
+                    FocusAction::Focus(_) => {
+                        EventResult::handled_focused(render_tree.child.content_shape())
+                    }
+                    FocusAction::Select => {
+                        (self.action)(captures);
+                        context.request_view_rebuild();
+                        EventResult::handled_focused(render_tree.child.content_shape())
+                    }
                 }
             }
-            Phase::Moved => match (render_tree.frame.contains(&point), state.0) {
-                (true, ButtonState::Captive(touch_id)) => {
-                    state.0 = ButtonState::CaptivePressed(touch_id);
-                    // TODO: Same here...
-                    result.recompute_view = true;
-                    result.handled = true;
-                }
-                (false, ButtonState::CaptivePressed(touch_id)) => {
-                    state.0 = ButtonState::Captive(touch_id);
-                    // TODO: Same here...
-                    result.recompute_view = true;
-                    result.handled = true;
-                }
-                (true, ButtonState::CaptivePressed(_)) | (false, ButtonState::Captive(_)) => {
-                    result.handled = true;
-                }
-                (_, ButtonState::AtRest) => (),
-            },
-            Phase::Cancelled => {
-                if matches!(state.0, ButtonState::CaptivePressed(_)) {
-                    // TODO: Same here...
-                    result.recompute_view = true;
-                }
-                state.0 = ButtonState::AtRest;
-                result.handled = false;
-            }
-            Phase::Hovering(_) => {
-                // Events are handled one-by-one, ignore irrelevant events, but don't modify the
-                // state.
-            }
+            _ => EventResult::Deferred,
         }
-        result
     }
 }

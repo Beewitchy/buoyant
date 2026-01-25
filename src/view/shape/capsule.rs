@@ -1,5 +1,6 @@
 use crate::{
     environment::LayoutEnvironment,
+    event::EventResult,
     layout::ResolvedLayout,
     primitives::{Dimensions, Point, ProposedDimensions},
     transition::Opacity,
@@ -22,6 +23,7 @@ impl ViewMarker for Capsule {
 impl<Captures: ?Sized> ViewLayout<Captures> for Capsule {
     type State = ();
     type Sublayout = Dimensions;
+    type FocusTree = ();
 
     fn transition(&self) -> Self::Transition {
         Opacity
@@ -55,5 +57,17 @@ impl<Captures: ?Sized> ViewLayout<Captures> for Capsule {
             origin,
             size: (*layout).into(),
         }
+    }
+
+    fn handle_event(
+        &self,
+        _event: &crate::view::Event,
+        _context: &crate::event::EventContext,
+        _render_tree: &mut Self::Renderables,
+        _captures: &mut Captures,
+        _state: &mut Self::State,
+        _focus: &mut Self::FocusTree,
+    ) -> EventResult {
+        EventResult::Deferred
     }
 }
