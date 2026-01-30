@@ -11,7 +11,7 @@ use std::process::exit;
 use std::time::{Duration, Instant};
 
 use buoyant::environment::DefaultEnvironment;
-use buoyant::event::{Event, EventContext, EventResult, simulator::MouseTracker};
+use buoyant::event::{Event, EventContext, EventResult, Key, simulator::MouseTracker};
 use buoyant::focus::{DefaultFocus, FocusAction, FocusDirection, Role};
 use buoyant::primitives::{Point, transform::LinearTransform};
 use buoyant::render::{AnimatedJoin, AnimationDomain, ContentShape, Render};
@@ -19,6 +19,7 @@ use buoyant::render_target::{EmbeddedGraphicsRenderTarget, RenderTarget as _, So
 use buoyant::{animation::Animation, if_view, match_view, view::prelude::*};
 use embedded_graphics::prelude::*;
 use embedded_graphics_simulator::{OutputSettings, SimulatorDisplay, SimulatorEvent, Window};
+
 #[allow(unused)]
 mod spacing {
     /// Spacing between sections / groups
@@ -279,6 +280,20 @@ fn root_view(state: &AppState) -> impl View<color::Space, AppState> + use<> {
             },
         }),
     ))
+    .popover(state.clean_overlay.clone(), view::clean::clean_overlay)
+    .bound_focus(BoundaryBehavior::Wrap)
+    .focus_touches()
+    .map_event::<(), _>(|event: &Event, _state| match event {
+        Event::KeyDown(key) => match key {
+            Key::UpArrow | Key::LeftArrow => Some(FocusAction::Previous.into()),
+            Key::DownArrow | Key::RightArrow => Some(FocusAction::Next.into()),
+            Key::Character(' ' | '\n') => Some(FocusAction::Select.into()),
+            Key::Backspace | Key::Delete => Some(FocusAction::Blur.into()),
+            _ => Some(event.clone()),
+        },
+        Event::KeyUp(_) => None, // Eat key up events
+        _ => Some(event.clone()),
+    })
 }
 
 fn tab_bar(tab: Tab) -> impl View<color::Space, Tab> + use<> {
@@ -308,10 +323,10 @@ fn tab_item<C, F: Fn(&mut C)>(
         (color::FOREGROUND_SECONDARY, 0)
     };
 
-    Button::new(on_tap, move |is_pressed: bool| {
+    Button::new(on_tap, move |s| {
         VStack::new((
             ZStack::new((
-                if_view!((is_selected || is_pressed) {
+                if_view!((is_selected || s.is_pressed()) {
                     Rectangle.foreground_color(color::BACKGROUND_SECONDARY)
                 }),
                 VStack::new((
@@ -320,7 +335,7 @@ fn tab_item<C, F: Fn(&mut C)>(
                 ))
                 .with_spacing(spacing::ELEMENT)
                 .padding(Edges::All, spacing::ELEMENT)
-                .hint_background_color(if is_selected || is_pressed {
+                .hint_background_color(if is_selected || s.is_pressed() {
                     color::BACKGROUND_SECONDARY
                 } else {
                     color::BACKGROUND

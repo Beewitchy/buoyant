@@ -10,6 +10,9 @@ use std::time::Duration;
 pub fn settings_tab(state: &AppState) -> impl View<color::Space, AppState> + use<> {
     ScrollView::new(
         VStack::new((
+            Text::new("Settings", &*font::FONT)
+                .with_font_size(font::HEADING_SIZE)
+                .foreground_color(color::Space::WHITE),
             toggle_text(
                 "Auto brew",
                 state.auto_brew,
@@ -19,6 +22,10 @@ pub fn settings_tab(state: &AppState) -> impl View<color::Space, AppState> + use
                     state.auto_brew = !state.auto_brew;
                 },
             ),
+            Rectangle
+                .frame_sized(10, 100)
+                .foreground_color(color::Space::CSS_LIGHT_GRAY)
+                .opacity(128),
             toggle_text(
                 "Stop on weight",
                 state.stop_on_weight,
@@ -81,16 +88,16 @@ fn toggle_button<C>(is_on: bool, on_tap: fn(&mut C)) -> impl View<color::Space, 
         (color::Space::CSS_LIGHT_GRAY, HorizontalAlignment::Leading)
     };
 
-    Button::new(on_tap, move |is_pressed: bool| {
+    Button::new(on_tap, move |s| {
         ZStack::new((
             buoyant::view::shape::Capsule.foreground_color(color),
             buoyant::view::shape::Circle
-                .foreground_color(if is_pressed {
+                .foreground_color(if s.is_pressed() {
                     color::Space::CSS_LIGHT_GRAY
                 } else {
                     color::Space::CSS_WHITE
                 })
-                .scale_effect(if is_pressed { 1.5 } else { 1.0 }, UnitPoint::center())
+                .scale_effect(if s.is_pressed() { 1.5 } else { 1.0 }, UnitPoint::center())
                 .padding(Edges::All, 2)
                 .animated(Animation::linear(Duration::from_millis(125)), is_on),
         ))
