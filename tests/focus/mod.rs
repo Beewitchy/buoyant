@@ -16,6 +16,7 @@ mod view {
     mod geometry_reader;
     mod hstack;
     mod match_view;
+    mod multiplex_focus;
     mod option;
     mod rotary;
     mod view_that_fits;

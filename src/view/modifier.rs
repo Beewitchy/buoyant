@@ -16,6 +16,7 @@ mod fixed_frame;
 mod fixed_size;
 mod flex_frame;
 mod foreground_color;
+mod gate_focus;
 mod geometry_group;
 mod hidden;
 mod hint_background;
@@ -30,6 +31,7 @@ mod popover;
 mod priority;
 mod scale_effect;
 mod transition;
+mod unfocusable;
 
 pub(crate) use animated::Animated;
 pub(crate) use aspect_ratio::AspectRatio;
@@ -44,6 +46,7 @@ pub(crate) use fixed_frame::FixedFrame;
 pub(crate) use fixed_size::FixedSize;
 pub(crate) use flex_frame::FlexFrame;
 pub(crate) use foreground_color::ForegroundStyle;
+pub(crate) use gate_focus::GateFocus;
 pub(crate) use geometry_group::GeometryGroup;
 pub(crate) use hidden::Hidden;
 pub(crate) use hint_background::HintBackground;
@@ -56,10 +59,12 @@ pub(crate) use popover::Popover;
 pub(crate) use priority::Priority;
 pub(crate) use scale_effect::ScaleEffect;
 pub(crate) use transition::Transition;
+pub(crate) use unfocusable::Unfocusable;
 
 use crate::{
     animation::Animation,
     event::Event,
+    focus::FocusGroup,
     layout::{Alignment, HorizontalAlignment, VerticalAlignment},
     primitives::{Point, UnitPoint},
     view::{ViewMarker, modifier::map_event::MapEvent, shape::Shape},
@@ -486,6 +491,20 @@ pub trait ViewModifier: Sized + ViewMarker {
     /// which one to use based on the focus group in the current event context.
     fn multiplex_focus<const N: usize>(self) -> MultiplexFocus<Self, N> {
         MultiplexFocus::new(self)
+    }
+
+    /// Focus events are only passed to the subtree when the incoming event's focus
+    /// group matches the specified group.
+    fn gate_focus(self, group: FocusGroup) -> GateFocus<Self> {
+        GateFocus::new(self, group)
+    }
+
+    /// Focus events are only passed to the subtree when the incoming event's focus
+    /// group matches the specified group.
+    fn unfocusable(self) -> Unfocusable<Self> {
+        Unfocusable::new(self)
+    }
+
     }
 
     /// Offsets a view by the specified values.
