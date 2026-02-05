@@ -20,6 +20,7 @@ mod geometry_group;
 mod hidden;
 mod hint_background;
 mod map_event;
+mod multiplex_focus;
 mod offset;
 mod opacity;
 mod overlay;
@@ -46,6 +47,7 @@ pub(crate) use foreground_color::ForegroundStyle;
 pub(crate) use geometry_group::GeometryGroup;
 pub(crate) use hidden::Hidden;
 pub(crate) use hint_background::HintBackground;
+pub(crate) use multiplex_focus::MultiplexFocus;
 pub(crate) use offset::Offset;
 pub(crate) use opacity::Opacity;
 pub(crate) use overlay::OverlayView;
@@ -476,6 +478,14 @@ pub trait ViewModifier: Sized + ViewMarker {
         mapping: F,
     ) -> MapEvent<Self, F, S> {
         MapEvent::new(self, mapping)
+    }
+
+    /// Multiplexes focus between multiple subtrees based on focus groups.
+    ///
+    /// This modifier maintains multiple focus trees and selects
+    /// which one to use based on the focus group in the current event context.
+    fn multiplex_focus<const N: usize>(self) -> MultiplexFocus<Self, N> {
+        MultiplexFocus::new(self)
     }
 
     /// Offsets a view by the specified values.
