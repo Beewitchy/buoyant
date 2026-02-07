@@ -15,6 +15,7 @@ mod erase_captures;
 mod fixed_frame;
 mod fixed_size;
 mod flex_frame;
+mod focus_touches;
 mod foreground_color;
 mod gate_focus;
 mod geometry_group;
@@ -45,6 +46,7 @@ use fixed::traits::ToFixed;
 pub(crate) use fixed_frame::FixedFrame;
 pub(crate) use fixed_size::FixedSize;
 pub(crate) use flex_frame::FlexFrame;
+pub(crate) use focus_touches::FocusTouches;
 pub(crate) use foreground_color::ForegroundStyle;
 pub(crate) use gate_focus::GateFocus;
 pub(crate) use geometry_group::GeometryGroup;
@@ -505,6 +507,10 @@ pub trait ViewModifier: Sized + ViewMarker {
         Unfocusable::new(self)
     }
 
+    /// Allows touch events to focus tapped elements. Generally, this should be applied
+    /// once near the root of the view hierarchy.
+    fn focus_touches(self) -> FocusTouches<Self> {
+        FocusTouches::new(self)
     }
 
     /// Offsets a view by the specified values.

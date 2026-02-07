@@ -4,6 +4,7 @@ mod harness;
 mod modifier {
     mod bound_focus;
     mod clip;
+    mod focus_touches;
     mod frame;
     mod hidden;
     mod opacity;
