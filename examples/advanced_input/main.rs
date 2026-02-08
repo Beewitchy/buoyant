@@ -70,6 +70,7 @@ pub fn view<'a, 'b, C: GoodPixelColor, F: Fn(&State) + 'a + Copy>(
         })
         .background_color(data.palette.dark_blue(), Rectangle)
     })
+    .focus_touches()
     .map_event::<(), _>(|event: &Event, _state| match event {
         Event::KeyDown(key) => match key {
             Key::Character('h') | Key::LeftArrow => Some(FocusAction::Previous.into()),
@@ -291,17 +292,19 @@ fn main() {
             use buoyant::render_target::{RenderTarget, SolidBrush, Stroke};
             let stroke = Stroke::new(2);
             let brush = SolidBrush::new(PALETTE.yellow());
-            match &focus_rect {
-                ContentShape::Rectangle(rect) => {
-                    target.stroke(&stroke, LinearTransform::identity(), &brush, None, rect);
+            if std::env::var("DEBUG_FOCUS").is_ok() {
+                match &focus_rect {
+                    ContentShape::Rectangle(rect) => {
+                        target.stroke(&stroke, LinearTransform::identity(), &brush, None, rect);
+                    }
+                    ContentShape::RoundedRectangle(rrect) => {
+                        target.stroke(&stroke, LinearTransform::identity(), &brush, None, rrect);
+                    }
+                    ContentShape::Circle(circle) => {
+                        target.stroke(&stroke, LinearTransform::identity(), &brush, None, circle);
+                    }
+                    ContentShape::Empty | _ => {}
                 }
-                ContentShape::RoundedRectangle(rrect) => {
-                    target.stroke(&stroke, LinearTransform::identity(), &brush, None, rrect);
-                }
-                ContentShape::Circle(circle) => {
-                    target.stroke(&stroke, LinearTransform::identity(), &brush, None, circle);
-                }
-                ContentShape::Empty | _ => {}
             }
 
             // Send to the display
