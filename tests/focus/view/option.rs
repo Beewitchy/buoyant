@@ -16,14 +16,14 @@ fn view_with_some(_: &State) -> impl View<(), State> + use<> {
 
 fn view_with_none(_: &State) -> impl View<(), State> + use<> {
     VStack::new((
-        None::<Button<fn(bool) -> Circle, Circle, fn(&mut State)>>,
+        None::<Button<fn(ButtonState) -> Circle, Circle, fn(&mut State)>>,
         Button::new(|s: &mut State| s.tapped_b = true, |_| Rectangle),
     ))
 }
 
 /// Only a None variant - no focusable content
 fn view_only_none(_: &State) -> impl View<(), State> + use<> {
-    None::<Button<fn(bool) -> Circle, Circle, fn(&mut State)>>
+    None::<Button<fn(ButtonState) -> Circle, Circle, fn(&mut State)>>
 }
 
 #[test]

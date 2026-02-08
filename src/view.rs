@@ -28,7 +28,7 @@ mod zstack;
 
 #[cfg(feature = "embedded-graphics")]
 pub use as_drawable::AsDrawable;
-pub use button::Button;
+pub use button::{Button, ButtonState};
 pub use capturing::Lens;
 pub use divider::Divider;
 pub use empty_view::EmptyView;
@@ -55,8 +55,8 @@ pub mod prelude {
     #[cfg(feature = "embedded-graphics")]
     pub use super::{AsDrawable, Image};
     pub use super::{
-        Button, Divider, EmptyView, ForEach, GeometryReader, HStack, Lens, ScrollView, Spacer,
-        Text, VStack, View, ViewLayout, ViewThatFits, ZStack,
+        Button, ButtonState, Divider, EmptyView, ForEach, GeometryReader, HStack, Lens, ScrollView,
+        Spacer, Text, VStack, View, ViewLayout, ViewThatFits, ZStack,
     };
     pub use super::{FitAxis, HorizontalTextAlignment, padding::Edges};
     pub use crate::animation::Animation;
