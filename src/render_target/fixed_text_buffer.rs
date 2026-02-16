@@ -82,10 +82,6 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
     {
         let layer = self.active_layer.clone();
         let mut new_layer = self.active_layer.clone();
-        new_layer.clip_rect = new_layer.clip_rect.or(Some(Rectangle::new(
-            Point::zero(),
-            Size::new(W as u32, H as u32),
-        )));
         layer_fn(LayerHandle::new(&mut new_layer));
         self.active_layer = new_layer;
         draw_fn(self);

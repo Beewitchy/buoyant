@@ -101,9 +101,6 @@ where
     {
         let layer = self.active_layer.clone();
         let mut new_layer = self.active_layer.clone();
-        new_layer.clip_rect = new_layer
-            .clip_rect
-            .or_else(|| Some(self.initial_clip.clone()));
         layer_fn(LayerHandle::new(&mut new_layer));
         self.active_layer = new_layer;
         draw_fn(self);
