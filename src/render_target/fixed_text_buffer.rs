@@ -26,7 +26,12 @@ impl<const W: usize, const H: usize> FixedTextBuffer<W, H> {
     }
 
     const fn draw_character(&mut self, point: Point, character: char) {
-        if self.active_layer.clip_rect.contains(&point) {
+        let clipped = if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
+            active_clip_rect.contains(&point)
+        } else {
+            true
+        };
+        if clipped {
             self.text[point.y as usize][point.x as usize] = character;
         }
     }
@@ -77,6 +82,10 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
     {
         let layer = self.active_layer.clone();
         let mut new_layer = self.active_layer.clone();
+        new_layer.clip_rect = new_layer.clip_rect.or(Some(Rectangle::new(
+            Point::zero(),
+            Size::new(W as u32, H as u32),
+        )));
         layer_fn(LayerHandle::new(&mut new_layer));
         self.active_layer = new_layer;
         draw_fn(self);
@@ -84,9 +93,12 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
     }
 
     fn clip_rect(&self) -> Rectangle {
-        self.active_layer
-            .clip_rect
-            .applying_inverse(&self.active_layer.transform)
+        let default_clip = Rectangle::new(Point::zero(), Size::new(W as u32, H as u32));
+        match self.active_layer.clip_rect {
+            Some(ref active_clip_rect) => &active_clip_rect,
+            None => &default_clip,
+        }
+        .applying_inverse(&self.active_layer.transform)
     }
 
     fn alpha(&self) -> u8 {
@@ -111,9 +123,11 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
         shape: &impl Shape,
     ) {
         let transform = transform.into().applying(&self.active_layer.transform);
-        let bounding_box = shape.bounding_box().applying(&transform);
-        if !bounding_box.intersects(&self.active_layer.clip_rect) {
-            return;
+        if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
+            let bounding_box = shape.bounding_box().applying(&transform);
+            if !bounding_box.intersects(&active_clip_rect) {
+                return;
+            }
         }
 
         if let Some(rect) = shape.as_rect() {
@@ -139,9 +153,11 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
         shape: &impl Shape,
     ) {
         let transform = transform.into().applying(&self.active_layer.transform);
-        let bounding_box = shape.bounding_box().applying(&transform);
-        if !bounding_box.intersects(&self.active_layer.clip_rect) {
-            return;
+        if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
+            let bounding_box = shape.bounding_box().applying(&transform);
+            if !bounding_box.intersects(&active_clip_rect) {
+                return;
+            }
         }
 
         if let Some(rect) = shape.as_rect() {

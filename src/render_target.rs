@@ -195,7 +195,7 @@ pub struct LayerConfig<C> {
     /// The transform from local to global coordinate space
     pub transform: LinearTransform,
     /// The clip rectangle for this layer, in the global coordinate space.
-    pub clip_rect: Rectangle,
+    pub clip_rect: Option<Rectangle>,
 }
 
 impl<C> LayerConfig<C> {
@@ -204,7 +204,7 @@ impl<C> LayerConfig<C> {
         alpha: u8,
         background_hint: Option<C>,
         transform: LinearTransform,
-        clip_rect: Rectangle,
+        clip_rect: Option<Rectangle>,
     ) -> Self {
         Self {
             alpha,
@@ -215,12 +215,22 @@ impl<C> LayerConfig<C> {
     }
 
     #[must_use]
+    pub const fn new_basic() -> Self {
+        Self {
+            alpha: 255,
+            background_hint: None,
+            transform: LinearTransform::identity(),
+            clip_rect: None,
+        }
+    }
+
+    #[must_use]
     pub const fn new_sized(size: Size) -> Self {
         Self {
             alpha: 255,
             background_hint: None,
             transform: LinearTransform::identity(),
-            clip_rect: Rectangle::new(Point::zero(), size),
+            clip_rect: Some(Rectangle::new(Point::zero(), size)),
         }
     }
 
@@ -230,7 +240,7 @@ impl<C> LayerConfig<C> {
             alpha: 255,
             background_hint: None,
             transform: LinearTransform::default(),
-            clip_rect: clip_rect.into(),
+            clip_rect: Some(clip_rect.into()),
         }
     }
 
@@ -301,12 +311,16 @@ impl<'a, C: Interpolate + Copy> LayerHandle<'a, C> {
     }
 
     pub fn clip(self, clip_rect: &Rectangle) -> Self {
-        // maintain clip rect in global coordinate space
-        // use zero-sized rectangle if the intersection is empty
-        self.layer.clip_rect = clip_rect
-            .applying(&self.layer.transform)
-            .intersection(&self.layer.clip_rect)
-            .unwrap_or_else(|| Rectangle::new(Point::zero(), Size::new(0, 0)));
+        if let Some(active_clip_rect) = &self.layer.clip_rect {
+            // maintain clip rect in global coordinate space
+            // use zero-sized rectangle if the intersection is empty
+            self.layer.clip_rect = Some(clip_rect
+                .applying(&self.layer.transform)
+                .intersection(&active_clip_rect)
+                .unwrap_or_else(|| Rectangle::new(Point::zero(), Size::new(0, 0))));
+        } else {
+            self.layer.clip_rect = Some(clip_rect.clone());
+        }
         self
     }
 }
@@ -317,13 +331,22 @@ mod tests {
     use crate::primitives::Point;
 
     #[test]
+    fn layer_config_new_basic() {
+        let layer = LayerConfig::<u8>::new_basic();
+
+        assert_eq!(layer.alpha, 255);
+        assert_eq!(layer.transform, LinearTransform::default());
+        assert_eq!(layer.clip_rect, None);
+    }
+
+    #[test]
     fn layer_config_new_sized() {
         let size = Size::new(640, 480);
         let layer = LayerConfig::<u8>::new_sized(size);
 
         assert_eq!(layer.alpha, 255);
         assert_eq!(layer.transform, LinearTransform::default());
-        assert_eq!(layer.clip_rect, Rectangle::new(Point::zero(), size));
+        assert_eq!(layer.clip_rect.unwrap(), Rectangle::new(Point::zero(), size));
     }
 
     #[test]
@@ -333,7 +356,7 @@ mod tests {
 
         assert_eq!(layer.alpha, 255);
         assert_eq!(layer.transform, LinearTransform::default());
-        assert_eq!(layer.clip_rect, clip_rect);
+        assert_eq!(layer.clip_rect, Some(clip_rect));
     }
 
     #[test]
@@ -374,7 +397,7 @@ mod tests {
             255,
             None,
             LinearTransform::new(Point::new(0, 0), 2.0),
-            Rectangle::new(Point::zero(), Size::new(100, 100)),
+            Some(Rectangle::new(Point::zero(), Size::new(100, 100))),
         );
         let offset = Point::new(10, 20);
 
@@ -391,7 +414,7 @@ mod tests {
             255,
             None,
             LinearTransform::new(Point::new(0, 0), 2.0),
-            Rectangle::new(Point::zero(), Size::new(100, 100)),
+            Some(Rectangle::new(Point::zero(), Size::new(100, 100))),
         );
         let additional_scale = ScaleFactor::from_num(1.5);
 
@@ -402,19 +425,35 @@ mod tests {
     }
 
     #[test]
-    fn clip_rect_intersection() {
+    fn initial_clip_rect_intersection() {
         let mut layer = LayerConfig::new(
             255,
             Option::<u8>::None,
             LinearTransform::identity(),
-            Rectangle::new(Point::new(0, 0), Size::new(100, 100)),
+            None,
         );
         let new_clip = Rectangle::new(Point::new(25, 25), Size::new(50, 50));
 
         LayerHandle::new(&mut layer).clip(&new_clip);
 
         let expected_clip = Rectangle::new(Point::new(25, 25), Size::new(50, 50));
-        assert_eq!(layer.clip_rect, expected_clip);
+        assert_eq!(layer.clip_rect, Some(expected_clip));
+    }
+
+    #[test]
+    fn clip_rect_intersection() {
+        let mut layer = LayerConfig::new(
+            255,
+            Option::<u8>::None,
+            LinearTransform::identity(),
+            Some(Rectangle::new(Point::new(0, 0), Size::new(100, 100))),
+        );
+        let new_clip = Rectangle::new(Point::new(25, 25), Size::new(50, 50));
+
+        LayerHandle::new(&mut layer).clip(&new_clip);
+
+        let expected_clip = Rectangle::new(Point::new(25, 25), Size::new(50, 50));
+        assert_eq!(layer.clip_rect, Some(expected_clip));
     }
 
     #[test]
@@ -423,7 +462,7 @@ mod tests {
             255,
             Option::<u8>::None,
             LinearTransform::new(Point::new(4, 8), 2.0),
-            Rectangle::new(Point::zero(), Size::new(100, 100)),
+            Some(Rectangle::new(Point::zero(), Size::new(100, 100))),
         );
         let new_clip = Rectangle::new(Point::new(10, 20), Size::new(50, 60));
 
@@ -433,7 +472,7 @@ mod tests {
         let expected_clip = transformed_clip
             .intersection(&Rectangle::new(Point::zero(), Size::new(100, 100)))
             .unwrap();
-        assert_eq!(layer.clip_rect, expected_clip);
+        assert_eq!(layer.clip_rect, Some(expected_clip));
     }
 
     #[test]
@@ -442,7 +481,7 @@ mod tests {
             255,
             Option::<u8>::None,
             LinearTransform::identity(),
-            Rectangle::new(Point::new(0, 0), Size::new(50, 50)),
+            Some(Rectangle::new(Point::new(0, 0), Size::new(50, 50))),
         );
         let new_clip = Rectangle::new(Point::new(100, 100), Size::new(50, 50));
 
@@ -450,7 +489,7 @@ mod tests {
 
         // Should result in zero-sized rectangle when there's no intersection
         let expected_clip = Rectangle::new(Point::zero(), Size::new(0, 0));
-        assert_eq!(layer.clip_rect, expected_clip);
+        assert_eq!(layer.clip_rect, Some(expected_clip));
     }
 
     #[test]
@@ -459,14 +498,14 @@ mod tests {
             255,
             Option::<u8>::None,
             LinearTransform::identity(),
-            Rectangle::new(Point::new(0, 0), Size::new(100, 100)),
+            Some(Rectangle::new(Point::new(0, 0), Size::new(100, 100))),
         );
         let new_clip = Rectangle::new(Point::new(50, 50), Size::new(100, 100));
 
         LayerHandle::new(&mut layer).clip(&new_clip);
 
         let expected_clip = Rectangle::new(Point::new(50, 50), Size::new(50, 50));
-        assert_eq!(layer.clip_rect, expected_clip);
+        assert_eq!(layer.clip_rect, Some(expected_clip));
     }
 
     #[test]
@@ -504,7 +543,7 @@ mod tests {
             128,
             Option::<u8>::None,
             LinearTransform::identity(),
-            Rectangle::new(Point::zero(), Size::new(100, 100)),
+            Some(Rectangle::new(Point::zero(), Size::new(100, 100))),
         );
 
         LayerHandle::new(&mut layer).hint_background(200);
@@ -519,7 +558,7 @@ mod tests {
             12,
             Some(100u8),
             LinearTransform::identity(),
-            Rectangle::new(Point::zero(), Size::new(100, 100)),
+            Some(Rectangle::new(Point::zero(), Size::new(100, 100))),
         );
 
         LayerHandle::new(&mut layer).hint_background(200);
