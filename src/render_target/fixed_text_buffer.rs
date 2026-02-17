@@ -206,6 +206,14 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
 impl<const W: usize, const H: usize> Surface for FixedTextBuffer<W, H> {
     type Color = char;
 
+    fn origin(&self) -> Point {
+        if let Some(ref active_clip) = self.active_layer.clip_rect {
+            active_clip.origin
+        } else {
+            Point::zero()
+        }
+    }
+
     fn size(&self) -> Size {
         self.size()
     }

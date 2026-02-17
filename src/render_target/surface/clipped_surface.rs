@@ -19,6 +19,9 @@ impl<S: Surface> ClippedSurface<S> {
 impl<S: Surface> Surface for ClippedSurface<S> {
     type Color = S::Color;
 
+    fn origin(&self) -> crate::primitives::Point {
+        self.surface.origin() + self.clip_rect.origin
+    }
     fn size(&self) -> Size {
         self.clip_rect.size
     }

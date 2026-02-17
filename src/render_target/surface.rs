@@ -19,6 +19,7 @@ pub use draw_target_surface::DrawTargetSurface;
 pub trait Surface {
     type Color: Copy;
 
+    fn origin(&self) -> Point;
     fn size(&self) -> Size;
 
     fn draw_iter<I>(&mut self, pixels: I)
@@ -77,7 +78,7 @@ impl<T: Surface<Color = P>, P: embedded_graphics::prelude::PixelColor> AsDrawTar
 impl<T: Surface> embedded_graphics::prelude::Dimensions for EmbeddedGraphicsSurface<&mut T> {
     fn bounding_box(&self) -> embedded_graphics::primitives::Rectangle {
         embedded_graphics::primitives::Rectangle::new(
-            embedded_graphics::prelude::Point::zero(),
+            self.0.origin().into(),
             self.0.size().into(),
         )
     }
@@ -133,6 +134,10 @@ where
 
 impl<T: Surface> Surface for &mut T {
     type Color = T::Color;
+
+    fn origin(&self) -> Point {
+        (**self).origin()
+    }
 
     fn size(&self) -> Size {
         (**self).size()

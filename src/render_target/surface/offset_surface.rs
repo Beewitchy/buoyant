@@ -19,12 +19,17 @@ impl<S: Surface> OffsetSurface<S> {
 impl<S: Surface> Surface for OffsetSurface<S> {
     type Color = S::Color;
 
+    fn origin(&self) -> Point {
+        self.surface.origin() + self.offset
+    }
+
     fn size(&self) -> Size {
         // TODO: Is this really the correct / expected behavior?
-        let mut size = self.surface.size();
-        size.width -= self.offset.x as u32;
-        size.height -= self.offset.y as u32;
-        size
+        // let mut size = self.surface.size();
+        // size.width -= self.offset.x as u32;
+        // size.height -= self.offset.y as u32;
+        // size
+        self.surface.size()
     }
 
     fn draw_iter<I>(&mut self, pixels: I)

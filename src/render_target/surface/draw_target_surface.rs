@@ -30,6 +30,9 @@ impl<'a, D: DrawTarget> DrawTargetSurface<'a, D> {
 impl<D: DrawTarget> Surface for DrawTargetSurface<'_, D> {
     type Color = D::Color;
 
+    fn origin(&self) -> crate::primitives::Point {
+        self.0.bounding_box().top_left.into()
+    }
     fn size(&self) -> crate::primitives::Size {
         self.0.bounding_box().size.into()
     }

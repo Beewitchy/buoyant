@@ -81,8 +81,7 @@ mod embedded_graphics {
             render_target: &mut impl RenderTarget<ColorFormat = I::Color>,
             _style: &I::Color,
         ) {
-            let clip_area = render_target.clip_rect();
-            _ = self.image.sub_image(&clip_area.into()).draw(
+            _ = self.image.draw(
                 &mut render_target
                     .raw_surface()
                     .draw_target()
