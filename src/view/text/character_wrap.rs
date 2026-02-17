@@ -300,8 +300,6 @@ mod tests {
         }
     }
 
-    impl crate::font::Sealed for VariableWidthFont {}
-
     impl<C> FontRender<C> for VariableWidthFont {
         fn draw(
             &self,

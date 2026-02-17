@@ -371,16 +371,17 @@ where
     }
 
     fn raw_surface(&mut self) -> impl Surface<Color = Self::ColorFormat> + '_ {
-        let size = self.surface.size();
-        let offset_surface = OffsetSurface::new(
-            &mut self.surface,
-            self.active_layer.transform.offset + self.initial_clip.origin,
-        );
-        if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
-            ClippedSurface::new(offset_surface, active_clip_rect.clone())
-        } else {
-            ClippedSurface::new(offset_surface, Rectangle::new(Point::zero(), size))
-        }
+        // let size = self.surface.size();
+        // let offset_surface = OffsetSurface::new(
+        //     &mut self.surface,
+        //     self.active_layer.transform.offset,
+        // );
+        // if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
+        //     ClippedSurface::new(offset_surface, active_clip_rect.clone())
+        // } else {
+        //     ClippedSurface::new(offset_surface, Rectangle::new(Point::zero(), size))
+        // }
+        OffsetSurface::new(&mut self.surface, self.active_layer.transform.offset)
     }
 }
 

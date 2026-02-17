@@ -574,8 +574,6 @@ mod tests {
         }
     }
 
-    impl crate::font::Sealed for VariableWidthFont {}
-
     impl<C> FontRender<C> for VariableWidthFont {
         fn draw(
             &self,
@@ -816,8 +814,6 @@ mod tests {
             }
         }
     }
-
-    impl<F> crate::font::Sealed for FontTrace<F> {}
 
     impl<C, F: FontRender<C>> FontRender<C> for FontTrace<F> {
         fn draw(

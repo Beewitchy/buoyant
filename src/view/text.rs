@@ -471,8 +471,6 @@ mod test {
         }
     }
 
-    impl crate::font::Sealed for ArbitraryFont {}
-
     impl<C> FontRender<C> for ArbitraryFont {
         fn draw(
             &self,
