@@ -21,6 +21,11 @@ pub trait Font {
     fn metrics(&self, attributes: &Self::Attributes) -> impl FontMetrics;
 }
 
+// TODO: This could probably accept a draw target instead of a surface?
+// As-is, it limits to basically just embedded-graphics capable fonts.
+// For now, I don't think it's worth allowing outside implementations
+// until a better solution is determined
+
 pub trait FontRender<Color>: Font {
     /// Render the character by drawing to a surface.
     fn draw(
