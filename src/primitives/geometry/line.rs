@@ -23,6 +23,10 @@ impl Shape for Line {
     where
         Self: 'iter;
 
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: embedded_graphics::prelude::PixelColor> =
+        super::embedded_graphics::PrimitiveDrawProvider<Line>;
+
     fn path_elements(&self, _tolerance: u16) -> Self::PathElementsIter<'_> {
         let elements = [PathEl::MoveTo(self.start), PathEl::LineTo(self.end)];
         ShapePathIter::new(elements)
@@ -67,6 +71,11 @@ impl From<Line> for embedded_graphics::primitives::Line {
     fn from(value: Line) -> Self {
         Self::new(value.start.into(), value.end.into())
     }
+}
+
+#[cfg(feature = "embedded-graphics")]
+impl super::embedded_graphics::PrimitiveShape for Line {
+    type Primitive<C: embedded_graphics::prelude::PixelColor> = embedded_graphics::primitives::Line;
 }
 
 #[cfg(test)]

@@ -60,22 +60,22 @@ pub trait RenderTarget {
     fn clear_animation_status(&mut self) -> bool;
 
     /// Fills a shape using the specified style and brush.
-    fn fill<C: Into<Self::ColorFormat>>(
+    fn fill<C: Into<Self::ColorFormat>, S: Shape>(
         &mut self,
         transform: impl Into<LinearTransform>,
         brush: &impl Brush<ColorFormat = C>,
         brush_offset: Option<Point>,
-        shape: &impl Shape,
+        shape: &S,
     );
 
     /// Strokes a shape using the specified style and brush.
-    fn stroke<C: Into<Self::ColorFormat>>(
+    fn stroke<C: Into<Self::ColorFormat>, S: Shape>(
         &mut self,
         stroke: &Stroke,
         transform: impl Into<LinearTransform>,
         brush: &impl Brush<ColorFormat = C>,
         brush_offset: Option<Point>,
-        shape: &impl Shape,
+        shape: &S,
     );
 
     /// Draws a series of glyphs using the specified style and brush.

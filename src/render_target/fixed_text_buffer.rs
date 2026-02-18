@@ -111,12 +111,12 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
         was_active
     }
 
-    fn fill<C: Into<Self::ColorFormat>>(
+    fn fill<C: Into<Self::ColorFormat>, S: Shape>(
         &mut self,
         transform: impl Into<LinearTransform>,
         brush: &impl Brush<ColorFormat = C>,
         _brush_offset: Option<Point>,
-        shape: &impl Shape,
+        shape: &S,
     ) {
         let transform = transform.into().applying(&self.active_layer.transform);
         if let Some(ref active_clip_rect) = self.active_layer.clip_rect {
@@ -140,13 +140,13 @@ impl<const W: usize, const H: usize> RenderTarget for FixedTextBuffer<W, H> {
         }
     }
 
-    fn stroke<C: Into<Self::ColorFormat>>(
+    fn stroke<C: Into<Self::ColorFormat>, S: Shape>(
         &mut self,
         _stroke: &Stroke,
         transform: impl Into<LinearTransform>,
         brush: &impl Brush<ColorFormat = C>,
         _brush_offset: Option<Point>,
-        shape: &impl Shape,
+        shape: &S,
     ) {
         let transform = transform.into().applying(&self.active_layer.transform);
         if let Some(ref active_clip_rect) = self.active_layer.clip_rect {

@@ -155,6 +155,10 @@ impl Shape for Rectangle {
     where
         Self: 'iter;
 
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: embedded_graphics::prelude::PixelColor> =
+        super::embedded_graphics::PrimitiveDrawProvider<Rectangle>;
+
     fn path_elements(&self, _tolerance: u16) -> Self::PathElementsIter<'_> {
         let top_left = self.origin;
         let top_right = Point::new(self.origin.x + self.size.width as i32, self.origin.y);
@@ -190,6 +194,11 @@ impl From<Rectangle> for embedded_graphics_core::primitives::Rectangle {
             size: value.size.into(),
         }
     }
+}
+
+#[cfg(feature = "embedded-graphics")]
+impl super::embedded_graphics::PrimitiveShape for Rectangle {
+    type Primitive<C: embedded_graphics::prelude::PixelColor> = embedded_graphics::primitives::Rectangle;
 }
 
 #[cfg(test)]

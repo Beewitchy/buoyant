@@ -57,11 +57,20 @@ impl From<RoundedRectangle> for embedded_graphics::primitives::RoundedRectangle 
     }
 }
 
+#[cfg(feature = "embedded-graphics")]
+impl super::embedded_graphics::PrimitiveShape for RoundedRectangle {
+    type Primitive<C: embedded_graphics::prelude::PixelColor> = embedded_graphics::primitives::RoundedRectangle;
+}
+
 impl Shape for RoundedRectangle {
     type PathElementsIter<'iter>
         = ShapePathIter<10>
     where
         Self: 'iter;
+
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: embedded_graphics::prelude::PixelColor> =
+        super::embedded_graphics::PrimitiveDrawProvider<RoundedRectangle>;
 
     fn path_elements(&self, _tolerance: u16) -> Self::PathElementsIter<'_> {
         let r = self.radius as i32;

@@ -65,7 +65,7 @@ impl<T: ?Sized> AnimatedJoin for Image<'_, T> {
 mod embedded_graphics {
     use embedded_graphics::{
         draw_target::DrawTargetExt,
-        image::{ImageDrawable, ImageDrawableExt},
+        image::ImageDrawable,
     };
 
     use crate::{

@@ -28,6 +28,10 @@ impl Shape for Circle {
     where
         Self: 'iter;
 
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: embedded_graphics::prelude::PixelColor> =
+        super::embedded_graphics::PrimitiveDrawProvider<Circle>;
+
     #[expect(clippy::cast_precision_loss)]
     fn path_elements(&self, _tolerance: u16) -> Self::PathElementsIter<'_> {
         // FIXME: This can be approximated quite well with a 4x cubic bezier
@@ -84,6 +88,11 @@ impl From<Circle> for embedded_graphics::primitives::Circle {
     fn from(value: Circle) -> Self {
         Self::new(value.origin.into(), value.diameter)
     }
+}
+
+#[cfg(feature = "embedded-graphics")]
+impl super::embedded_graphics::PrimitiveShape for Circle {
+    type Primitive<C: embedded_graphics::prelude::PixelColor> = embedded_graphics::primitives::Circle;
 }
 
 #[cfg(test)]

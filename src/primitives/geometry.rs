@@ -38,6 +38,9 @@ pub trait Shape {
     /// The smallest rectangle that encloses the shape.
     fn bounding_box(&self) -> Rectangle;
 
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: ::embedded_graphics::prelude::PixelColor>: self::embedded_graphics::DrawProvider<Self, C>;
+
     /// If the shape is a line, make it available.
     fn as_line(&self) -> Option<Line> {
         None
@@ -96,4 +99,130 @@ pub(crate) enum Intersection {
     Overlaps,
     /// The other rectangle does not intersect with this rectangle.
     NonIntersecting,
+}
+
+#[cfg(feature = "embedded-graphics")]
+pub mod embedded_graphics {
+    use core::marker::PhantomData;
+
+    use super::{PathEl, Point, Shape};
+    use crate::primitives::transform::{CoordinateSpaceTransform, LinearTransform};
+
+    use embedded_graphics::{
+        Drawable,
+        geometry::Point as EgPoint,
+        prelude::{DrawTarget, PixelColor},
+        primitives::{Line as EgLine, Primitive as EgPrimitive, PrimitiveStyle, StyledDrawable},
+    };
+
+    pub trait DrawProvider<Sh: Shape + ?Sized, C: PixelColor> {
+        fn draw(
+            target: &mut impl DrawTarget<Color = C>,
+            shape: &Sh,
+            transform: &LinearTransform,
+            style: &PrimitiveStyle<C>,
+        );
+    }
+
+    pub trait PrimitiveShape: Shape + CoordinateSpaceTransform {
+        // type Primitive: EgPrimitive + Drawable;
+        type Primitive<C: PixelColor>: EgPrimitive
+            + StyledDrawable<PrimitiveStyle<C>, Color = C>;
+    }
+
+    #[derive(Debug)]
+    pub struct PrimitiveDrawProvider<S: PrimitiveShape> {
+        phantom: PhantomData<S>,
+    }
+
+    impl<Sh, C: PixelColor> DrawProvider<Sh, C> for PrimitiveDrawProvider<Sh>
+    where
+        Sh: PrimitiveShape + Into<Sh::Primitive<C>>,
+    {
+        fn draw(
+            target: &mut impl DrawTarget<Color = C>,
+            shape: &Sh,
+            transform: &LinearTransform,
+            style: &PrimitiveStyle<C>,
+        ) {
+            let primitive: Sh::Primitive<C> = shape.applying(transform).into();
+            let styled = primitive.into_styled(*style);
+            let _ = styled.draw(target);
+        }
+    }
+
+    #[derive(Debug)]
+    pub struct PathDrawProvider;
+
+    impl<S: Shape, C: PixelColor> DrawProvider<S, C> for PathDrawProvider {
+        fn draw(
+            target: &mut impl DrawTarget<Color = C>,
+            shape: &S,
+            transform: &LinearTransform,
+            style: &PrimitiveStyle<C>,
+        ) {
+            let offset = transform.offset;
+            // Simplistic approach: convert each path segment to a line
+            let mut last_point = None;
+
+            for element in shape.path_elements(1) {
+                match element {
+                    PathEl::MoveTo(point) => {
+                        last_point = Some(Point::new(point.x + offset.x, point.y + offset.y));
+                    }
+                    PathEl::LineTo(point) => {
+                        if let Some(start) = last_point {
+                            let end = Point::new(point.x + offset.x, point.y + offset.y);
+
+                            let start_eg = EgPoint::new(start.x, start.y);
+                            let end_eg = EgPoint::new(end.x, end.y);
+
+                            let eg_line = EgLine::new(start_eg, end_eg).into_styled(*style);
+                            let _ = eg_line.draw(target);
+
+                            last_point = Some(end);
+                        }
+                    }
+                    PathEl::QuadTo(_control, point) => {
+                        // FIXME: Simplify quadratic curves to straight lines for now
+                        if let Some(start) = last_point {
+                            let end = Point::new(point.x + offset.x, point.y + offset.y);
+
+                            let start_eg = EgPoint::new(start.x, start.y);
+                            let end_eg = EgPoint::new(end.x, end.y);
+
+                            let eg_line = EgLine::new(start_eg, end_eg).into_styled(*style);
+                            let _ = eg_line.draw(target);
+
+                            last_point = Some(end);
+                        }
+                    }
+                    PathEl::CurveTo(_control1, _control2, point) => {
+                        // FIXME: Simplify cubic curves to straight lines for now
+                        if let Some(start) = last_point {
+                            let end = Point::new(point.x + offset.x, point.y + offset.y);
+
+                            let start_eg = EgPoint::new(start.x, start.y);
+                            let end_eg = EgPoint::new(end.x, end.y);
+
+                            let eg_line = EgLine::new(start_eg, end_eg).into_styled(*style);
+                            let _ = eg_line.draw(target);
+
+                            last_point = Some(end);
+                        }
+                    }
+                    PathEl::ClosePath => {
+                        // Close the path by drawing a line back to the starting point
+                        if let (Some(start), Some(first)) = (last_point, last_point) {
+                            let start_eg = EgPoint::new(start.x, start.y);
+                            let end_eg = EgPoint::new(first.x, first.y);
+
+                            let eg_line = EgLine::new(start_eg, end_eg).into_styled(*style);
+                            let _ = eg_line.draw(target);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
