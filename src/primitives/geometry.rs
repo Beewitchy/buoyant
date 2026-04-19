@@ -129,7 +129,6 @@ pub mod embedded_graphics {
     }
 
     pub trait PrimitiveShape: Shape + CoordinateSpaceTransform {
-        // type Primitive: EgPrimitive + Drawable;
         type Primitive<C: PixelColor>: EgPrimitive
             + StyledDrawable<PrimitiveStyle<C>, Color = C>;
     }

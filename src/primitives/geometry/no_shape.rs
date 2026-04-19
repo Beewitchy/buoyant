@@ -24,6 +24,8 @@ impl CoordinateSpaceTransform for NoShape {
 
 impl Shape for NoShape {
     type PathElementsIter<'iter> = ShapePathIter<0>;
+    #[cfg(feature = "embedded-graphics")]
+    type Draw<C: embedded_graphics::prelude::PixelColor> = Self;
 
     fn path_elements(&self, _tolerance: u16) -> Self::PathElementsIter<'_> {
         ShapePathIter::new([])
@@ -32,5 +34,16 @@ impl Shape for NoShape {
     fn bounding_box(&self) -> Rectangle {
         // This is sort of meaningless...
         Rectangle::new(Point::new(0, 0), Size::new(0, 0))
+    }
+}
+
+#[cfg(feature = "embedded-graphics")]
+impl<C: embedded_graphics::prelude::PixelColor> super::embedded_graphics::DrawProvider<NoShape, C> for NoShape {
+    fn draw(
+        _target: &mut impl embedded_graphics::prelude::DrawTarget<Color = C>,
+        _shape: &NoShape,
+        _transform: &LinearTransform,
+        _style: &embedded_graphics::primitives::PrimitiveStyle<C>,
+    ) {
     }
 }
