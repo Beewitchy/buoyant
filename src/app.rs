@@ -88,8 +88,6 @@ where
 {
     /// Creates a new `App` with the given initial state, display size, and view function.
     pub fn new(state: S, size: Size, view_fn: F) -> Self
-    where
-        S: 'static,
     {
         let view = (view_fn)(&state);
         let env = DefaultEnvironment::non_animated();
