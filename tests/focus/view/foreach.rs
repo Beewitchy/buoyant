@@ -1,10 +1,10 @@
 use buoyant::{
     app::{App, Harness as _},
-    event::EventResult,
-    focus::Role,
+    event::{Event, EventResult, Key},
+    focus::{FocusAction, Role},
     primitives::Size,
     render::ContentShape,
-    view::prelude::*,
+    view::{map_event::Mapping, prelude::*},
 };
 
 #[derive(Default)]
@@ -207,4 +207,38 @@ fn empty_list_end_focus_returns_deferred() {
     assert!(matches!(harness.focus_backward(), EventResult::Deferred));
     // closure shouldn't somehow magically be called, idk
     assert!(matches!(harness.select(), EventResult::Deferred));
+}
+
+fn key_aware_foreach(_: &State) -> impl View<(), State> + use<> {
+    ForEach::<3>::new_vertical(&THREE_ITEMS, |&item| {
+        let index = item as usize;
+        Button::new(move |s: &mut State| s.selected = Some(index), |_| Circle).map_event(
+            move |event, _: &mut State| match event {
+                Event::KeyDown(Key::Character('\n')) => {
+                    Mapping::Replace(Event::from(FocusAction::Select))
+                }
+                Event::KeyUp(_) => Mapping::Defer,
+                _ => Mapping::Passthrough,
+            },
+        )
+    })
+}
+
+#[test]
+fn key_down_routes_only_to_focused_child() {
+    let mut harness =
+        App::new(State::default(), Size::new(100, 300), key_aware_foreach).with_roles(Role::Button);
+
+    // Focus the first item.
+    assert!(matches!(
+        harness.focus_forward().shape(),
+        Some(ContentShape::Circle(_))
+    ));
+    harness.key_down(Key::Character('\n'));
+    assert_eq!(harness.state().selected, Some(0));
+
+    // Move to the second item; the key should activate it, not the first.
+    harness.next();
+    harness.key_down(Key::Character('\n'));
+    assert_eq!(harness.state().selected, Some(1));
 }
